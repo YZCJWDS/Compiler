@@ -18,6 +18,8 @@
 #include "ScopeStack.h"
 #include "Common.h"
 #include "VoidType.h"
+#include "PointerType.h"
+#include "IntegerType.h"
 
 Module::Module(std::string _name) : name(_name)
 {
@@ -39,6 +41,19 @@ Module::Module(std::string _name) : name(_name)
 
     // getch: 从标准输入读取一个字符
     (void) newFunction("getch", IntegerType::getTypeInt(), {}, true);
+
+    // getarray: 从标准输入读取数组元素
+    (void) newFunction("getarray",
+                       IntegerType::getTypeInt(),
+                       {new FormalParam{const_cast<Type *>((Type *) PointerType::get(IntegerType::getTypeInt())), "a"}},
+                       true);
+
+    // putarray: 打印数组元素
+    (void) newFunction("putarray",
+                       VoidType::getType(),
+                       {new FormalParam{IntegerType::getTypeInt(), "n"},
+                        new FormalParam{const_cast<Type *>((Type *) PointerType::get(IntegerType::getTypeInt())), "a"}},
+                       true);
 
     // putstr: 打印一个字符串，未实现，需要支持字符串类型
     // (void) newFunction("putstr", VoidType::getType(), {new FormalParam{<string type>, "s"}}, true);

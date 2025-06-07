@@ -1,73 +1,77 @@
-int M;
-int L;
-int N;
-
-// void putint(int k);
-
-int add(int a0[], int a1[], int a2[], int b0[], int b1[], int b2[], int c0[], int c1[], int c2[])
+int set(int a[], int pos, int d)
 {
-    int i;
-    i = 0;
-    while (i < M) {
-        c0[i] = a0[i] + b0[i];
-        c1[i] = a1[i] + b1[i];
-        c2[i] = a2[i] + b2[i];
-        i = i + 1;
+    int x[31];
+
+    int k = 0;
+    while (k < 31) {
+        x[k] = 0;
+        k = k + 1;
     }
 
+    x[0] = 1;
+    x[1] = x[0] * 2;
+    x[2] = x[1] * 2;
+    x[3] = x[2] * 2;
+    x[4] = x[3] * 2;
+    x[5] = x[4] * 2;
+    x[6] = x[5] * 2;
+    x[7] = x[6] * 2;
+    x[8] = x[7] * 2;
+    x[9] = x[8] * 2;
+    x[10] = x[9] * 2;
+
+    int i = 10;
+    while (i < 30) {
+        i = i + 1;
+        x[i] = x[i - 1] * 2;
+    }
+
+    int v = 0;
+
+    if (pos / 30 >= 10000)
+        return 0;
+
+    if (a[pos / 30] / (x[pos % 30]) % 2 != d) {
+        if (a[pos / 30] / (x[pos % 30]) % 2 == 0)
+            if (d == 1)
+                v = x[pos % 30];
+
+        if (a[pos / 30] / x[pos % 30] % 2 == 1)
+            if (d == 0)
+                v = v - x[pos % 30];
+    }
+
+    a[pos / 30] = a[pos / 30] + v;
     return 0;
 }
 
+int seed[3];
+int staticvalue;
+
+int rand()
+{
+    staticvalue = staticvalue * seed[0] + seed[1];
+    staticvalue = staticvalue % seed[2];
+    if (staticvalue < 0)
+        staticvalue = seed[2] + staticvalue;
+    return staticvalue;
+}
+
+int a[10000];
 int main()
 {
-    N = 3;
-    M = 3;
-    L = 3;
-    int a0[3];
-    int a1[3];
-    int a2[3];
-    int b0[3];
-    int b1[3];
-    int b2[3];
-    int c0[6];
-    int c1[3];
-    int c2[3];
-    int i;
-    i = 0;
-    while (i < M) {
-        a0[i] = i;
-        a1[i] = i;
-        a2[i] = i;
-        b0[i] = i;
-        b1[i] = i;
-        b2[i] = i;
-        i = i + 1;
+    seed[0] = 19971231;
+    seed[1] = 19981013;
+    seed[2] = 1000000000 + 7;
+    int n = getint();
+    staticvalue = getint();
+    int x, y;
+    while (n > 0) {
+        n = n - 1;
+        x = rand() % 300000;
+        y = rand() % 2;
+        set(a, x, y);
     }
-    i = add(a0, a1, a2, b0, b1, b2, c0, c1, c2);
-    int x;
-    while (i < N) {
-        x = c0[i];
-        putint(x);
-        i = i + 1;
-    }
-    x = 10;
-    putch(x);
-    i = 0;
-    while (i < N) {
-        x = c1[i];
-        putint(x);
-        i = i + 1;
-    }
-    x = 10;
-    putch(x);
-    i = 0;
-    while (i < N) {
-        x = c2[i];
-        putint(x);
-        i = i + 1;
-    }
-    x = 10;
-    putch(x);
-
+    putarray(10000, a);
     return 0;
 }
