@@ -64,6 +64,7 @@ void yyerror(char * msg);
 %type <op_class> AddOp MulOp UnaryOp
 %type <node> LogicalOrExp LogicalAndExp RelExp  // 新增RelExp语义类型
 %type <node> FormalParams FormalParamList FormalParam // 新增形参相关非终结符
+%type <node> DimensionList IndexList // 新增数组维度和索引列表非终结符
 
 %left T_OR
 %left T_AND
@@ -178,8 +179,8 @@ FormalParam : BasicType T_ID {
 		// 创建形参节点，包含类型和ID
 		$$ = create_contain_node(ast_operator_type::AST_OP_FUNC_FORMAL_PARAM, type_node, id_node);
 	}
-	| BasicType T_ID T_L_BRACKET T_R_BRACKET {
-		// 数组形参，例如: int a[]
+	| BasicType T_ID T_L_BRACKET T_R_BRACKET DimensionList {
+		// 数组形参，例如: int a[][2][3]...
 		
 		// 创建类型节点（保持为基本类型）
 		ast_node * type_node = create_type_node($1);
@@ -187,14 +188,51 @@ FormalParam : BasicType T_ID {
 		// 创建变量ID节点
 		ast_node * id_node = ast_node::New($2.id, $2.lineno);
 		
-		// 创建数组标记节点（用一个整数0表示数组参数）
-		ast_node * array_marker = ast_node::New(digit_int_attr{0, $2.lineno});
+		// 创建第一维空标记节点（第一维大小未指定）
+		ast_node * first_dim = ast_node::New(digit_int_attr{0, $2.lineno});
 		
 		// 释放字符串空间
 		free($2.id);
 		
-		// 创建形参节点，包含类型、ID和数组标记
-		$$ = create_contain_node(ast_operator_type::AST_OP_FUNC_FORMAL_PARAM, type_node, id_node, array_marker);
+		// 合并所有维度：第一维 + 后续维度列表
+		ast_node * all_dims = create_contain_node(ast_operator_type::AST_OP_ARRAY_DIMENSIONS, first_dim);
+		if ($5 != nullptr) {
+			// 将DimensionList的所有子节点添加到all_dims中
+			for (auto child : $5->sons) {
+				all_dims->insert_son_node(child);
+			}
+		}
+		
+		// 创建形参节点，包含类型、ID和所有维度
+		$$ = create_contain_node(ast_operator_type::AST_OP_FUNC_FORMAL_PARAM, type_node, id_node, all_dims);
+	}
+	;
+
+// 维度列表，用于数组定义和形参
+DimensionList : T_L_BRACKET T_DIGIT T_R_BRACKET {
+		// 单个维度
+		ast_node * size_node = ast_node::New($2);
+		$$ = create_contain_node(ast_operator_type::AST_OP_ARRAY_DIMENSIONS, size_node);
+	}
+	| DimensionList T_L_BRACKET T_DIGIT T_R_BRACKET {
+		// 递归添加维度
+		ast_node * size_node = ast_node::New($3);
+		$$ = $1->insert_son_node(size_node);
+	}
+	| {
+		// 空维度列表
+		$$ = nullptr;
+	}
+	;
+
+// 索引列表，用于数组访问
+IndexList : T_L_BRACKET Expr T_R_BRACKET {
+		// 单个索引
+		$$ = create_contain_node(ast_operator_type::AST_OP_ARRAY_INDICES, $2);
+	}
+	| IndexList T_L_BRACKET Expr T_R_BRACKET {
+		// 递归添加索引
+		$$ = $1->insert_son_node($3);
 	}
 	;
 
@@ -287,59 +325,22 @@ VarDef : T_ID {
 		// 对于字符型字面量的字符串空间需要释放，因词法用到了strdup进行了字符串复制
 		free($1.id);
 	}
-    | T_ID T_L_BRACKET T_DIGIT T_R_BRACKET {
-        // 一维数组变量定义，例如: int a[10];
+    | T_ID DimensionList {
+        // 数组变量定义，支持任意维度，例如: int a[10][20][30]...
         
         // 创建变量ID节点
         ast_node* id_node = ast_node::New(var_id_attr{$1.id, $1.lineno});
         
-        // 创建数组大小节点
-        ast_node* size_node = ast_node::New($3);
-        
         // 释放字符串空间
         free($1.id);
         
-        // 创建数组定义节点
-        $$ = create_contain_node(ast_operator_type::AST_OP_ARRAY_DEF, id_node, size_node);
-    }
-    | T_ID T_L_BRACKET T_DIGIT T_R_BRACKET T_L_BRACKET T_DIGIT T_R_BRACKET {
-        // 二维数组变量定义，例如: int a[10][20];
-        
-        // 创建变量ID节点
-        ast_node* id_node = ast_node::New(var_id_attr{$1.id, $1.lineno});
-        
-        // 创建第一维大小节点
-        ast_node* size1_node = ast_node::New($3);
-        
-        // 创建第二维大小节点
-        ast_node* size2_node = ast_node::New($6);
-        
-        // 释放字符串空间
-        free($1.id);
-        
-        // 创建二维数组定义节点
-        $$ = create_contain_node(ast_operator_type::AST_OP_ARRAY_DEF, id_node, size1_node, size2_node);
-    }
-    | T_ID T_L_BRACKET T_DIGIT T_R_BRACKET T_L_BRACKET T_DIGIT T_R_BRACKET T_L_BRACKET T_DIGIT T_R_BRACKET {
-        // 三维数组变量定义，例如: int a[4][2][1];
-        
-        // 创建变量ID节点
-        ast_node* id_node = ast_node::New(var_id_attr{$1.id, $1.lineno});
-        
-        // 创建第一维大小节点
-        ast_node* size1_node = ast_node::New($3);
-        
-        // 创建第二维大小节点
-        ast_node* size2_node = ast_node::New($6);
-        
-        // 创建第三维大小节点
-        ast_node* size3_node = ast_node::New($9);
-        
-        // 释放字符串空间
-        free($1.id);
-        
-        // 创建三维数组定义节点
-        $$ = create_contain_node(ast_operator_type::AST_OP_ARRAY_DEF, id_node, size1_node, size2_node, size3_node);
+        // 创建数组定义节点，包含ID和所有维度
+        if ($2 != nullptr) {
+            $$ = create_contain_node(ast_operator_type::AST_OP_ARRAY_DEF, id_node, $2);
+        } else {
+            // 如果维度列表为空，则是普通变量
+            $$ = id_node;
+        }
     }
     | T_ID T_ASSIGN Expr {
         // 变量ID及初始值
@@ -565,7 +566,7 @@ RealParamList : Expr {
 	}
 	;
 
-// 左值表达式，目前只支持变量名，实际上还有下标变量
+// 左值表达式，支持变量名和任意维度的数组访问
 LVal : T_ID {
 		// 变量名终结符
 
@@ -575,8 +576,8 @@ LVal : T_ID {
 		// 对于字符型字面量的字符串空间需要释放，因词法用到了strdup进行了字符串复制
 		free($1.id);
 	}
-    | T_ID T_L_BRACKET Expr T_R_BRACKET {
-        // 数组元素访问，例如: a[i]
+    | T_ID IndexList {
+        // 数组元素访问，支持任意维度，例如: a[i][j][k]...
         
         // 创建变量名节点
         ast_node* id_node = ast_node::New($1);
@@ -584,32 +585,13 @@ LVal : T_ID {
         // 释放字符串空间
         free($1.id);
         
-        // 创建数组访问节点
-        $$ = create_contain_node(ast_operator_type::AST_OP_ARRAY_ACCESS, id_node, $3);
-    }
-    | T_ID T_L_BRACKET Expr T_R_BRACKET T_L_BRACKET Expr T_R_BRACKET {
-        // 二维数组元素访问，例如: a[i][j]
-        
-        // 创建变量名节点
-        ast_node* id_node = ast_node::New($1);
-        
-        // 释放字符串空间
-        free($1.id);
-        
-        // 创建二维数组访问节点
-        $$ = create_contain_node(ast_operator_type::AST_OP_ARRAY_ACCESS, id_node, $3, $6);
-    }
-    | T_ID T_L_BRACKET Expr T_R_BRACKET T_L_BRACKET Expr T_R_BRACKET T_L_BRACKET Expr T_R_BRACKET {
-        // 三维数组元素访问，例如: a[i][j][k]
-        
-        // 创建变量名节点
-        ast_node* id_node = ast_node::New($1);
-        
-        // 释放字符串空间
-        free($1.id);
-        
-        // 创建三维数组访问节点
-        $$ = create_contain_node(ast_operator_type::AST_OP_ARRAY_ACCESS, id_node, $3, $6, $9);
+        // 创建数组访问节点，包含ID和所有索引
+        if ($2 != nullptr) {
+            $$ = create_contain_node(ast_operator_type::AST_OP_ARRAY_ACCESS, id_node, $2);
+        } else {
+            // 如果没有索引，则是普通变量
+            $$ = id_node;
+        }
     }
 	;
 

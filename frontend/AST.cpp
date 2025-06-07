@@ -485,6 +485,10 @@ const char * getOperatorTypeName(ast_operator_type type)
             return "AST_OP_ARRAY_DEF";
         case ast_operator_type::AST_OP_ARRAY_ACCESS:
             return "AST_OP_ARRAY_ACCESS";
+        case ast_operator_type::AST_OP_ARRAY_DIMENSIONS:
+            return "AST_OP_ARRAY_DIMENSIONS";
+        case ast_operator_type::AST_OP_ARRAY_INDICES:
+            return "AST_OP_ARRAY_INDICES";
         case ast_operator_type::AST_OP_MAX:
             return "AST_OP_MAX";
         default:

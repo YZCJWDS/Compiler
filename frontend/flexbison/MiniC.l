@@ -189,6 +189,20 @@
                 ;
             }
 
+"/*"        {
+                // 多行注释开始，进入注释处理状态
+                int c;
+                while ((c = yyinput()) != 0) {
+                    if (c == '*') {
+                        if ((c = yyinput()) == '/') {
+                            break;  // 找到注释结束标记
+                        } else {
+                            unput(c);  // 回退一个字符
+                        }
+                    }
+                }
+            }
+
 .           {
                 printf("Line %d: Invalid char %s\n", yylineno, yytext);
                 // 词法识别错误
