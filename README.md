@@ -1,3 +1,5 @@
+用flexbison方法实现
+
 # 1. MiniC编译器-表达式版
 
 ## 1.1. 编译器的功能
@@ -13,7 +15,7 @@
 7. 支持内置函数putint，通过它可在终端显示对应的十进制值；
 8. 变量可重名，支持变量分层管理。
 
-源代码位置：<https://github.com/NPUCompiler/exp03-minic-expr.git>
+源代码位置：<https://github.com/NPUCompiler/exp04-minic-expr.git>
 
 ## 1.2. 编译器的文法
 
